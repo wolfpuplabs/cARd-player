@@ -2,10 +2,12 @@
 <html lang="id">
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>PlayXR - Red Panda AR</title>
+  <title>PlayXR - Red Panda AR & 3D</title>
   
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
+  
+  <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
 
   <style>
     /* =========================================
@@ -14,10 +16,11 @@
     body { 
       margin: 0; 
       overflow: hidden; 
-      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
       background-color: #000;
     }
     
+    /* Overlay Start Screen */
     #spatial-overlay {
       position: absolute;
       top: 0; left: 0; width: 100%; height: 100%;
@@ -31,7 +34,7 @@
       z-index: 9999;
       color: white;
       text-align: center;
-      transition: opacity 0.8s cubic-bezier(0.4, 0, 0.2, 1);
+      transition: opacity 0.8s ease;
     }
 
     .glass-panel {
@@ -39,30 +42,16 @@
       padding: 50px 40px;
       border-radius: 32px;
       border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5), inset 0 0 20px rgba(255, 255, 255, 0.05);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
       max-width: 85%;
       width: 320px;
       animation: float 6s ease-in-out infinite;
     }
 
-    .logo {
-      width: 140px;
-      margin-bottom: 25px;
-      animation: pulseGlow 3s infinite alternate;
-    }
+    h1 { margin-top: 0; font-size: 24px; font-weight: 600; }
+    p { font-size: 15px; opacity: 0.7; margin-bottom: 35px; line-height: 1.6; }
 
-    h1 { 
-      margin-top: 0; font-size: 24px; font-weight: 600; 
-      background: linear-gradient(to right, #fff, #a1c4fd);
-      -webkit-background-clip: text;
-      -webkit-text-fill-color: transparent;
-    }
-    
-    p { font-size: 15px; opacity: 0.7; margin-bottom: 35px; line-height: 1.6; font-weight: 300; }
-
-    /* Animated Glow Button */
     .btn-start {
-      position: relative;
       background: rgba(255, 255, 255, 0.1);
       color: #fff;
       border: 1px solid rgba(255, 255, 255, 0.3);
@@ -71,109 +60,148 @@
       border-radius: 40px;
       cursor: pointer;
       font-weight: 600;
-      letter-spacing: 1px;
-      overflow: hidden;
       transition: all 0.3s ease;
-      backdrop-filter: blur(10px);
     }
+    .btn-start:hover { background: rgba(255, 255, 255, 0.2); }
+
+    /* =========================================
+       AR INTERFACE UI (Sketsa Kuning)
+       ========================================= */
     
-    .btn-start:hover {
-      background: rgba(255, 255, 255, 0.2);
-      transform: translateY(-2px);
-      box-shadow: 0 10px 25px rgba(255, 255, 255, 0.15);
-    }
-
-    .btn-start:active { transform: scale(0.95); }
-
-    .btn-start::before {
-      content: '';
+    /* Frame Putus-putus di Tepi Layar */
+    #scan-ui {
+      display: none; 
       position: absolute;
-      top: 0; left: -100%; width: 100%; height: 100%;
-      background: linear-gradient(90deg, transparent, rgba(255,255,255,0.4), transparent);
-      animation: shine 3s infinite;
+      top: 15px; left: 15px; right: 15px; bottom: 15px;
+      border: 4px dashed #FFD700; /* Warna kuning */
+      border-radius: 20px;
+      pointer-events: none;
+      z-index: 100;
+      animation: scanPulse 1.5s infinite alternate;
     }
 
-    .loading-text {
-      font-size: 13px;
-      margin-top: 20px;
-      opacity: 0;
-      color: #a1c4fd;
-      letter-spacing: 2px;
+    /* Logo PlayXR di atas AR */
+    #ar-logo {
+      display: none;
+      position: absolute;
+      top: 35px;
+      left: 50%;
+      transform: translateX(-50%);
+      width: 150px; /* Sesuaikan ukuran logo */
+      z-index: 101;
+      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
+    }
+
+    /* Tombol Buka 3D Model Viewer */
+    #btn-3d {
+      display: none;
+      position: absolute;
+      bottom: 40px;
+      left: 50%;
+      transform: translateX(-50%);
+      background: #FFD700; /* Warna kuning */
+      color: #000;
+      border: none;
+      padding: 14px 35px;
+      border-radius: 30px;
+      font-weight: 700;
+      font-size: 16px;
+      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
+      z-index: 101;
+      cursor: pointer;
+      pointer-events: auto;
       text-transform: uppercase;
-      animation: pulse 1.5s infinite;
+      letter-spacing: 1px;
+    }
+    #btn-3d:active { transform: translateX(-50%) scale(0.95); }
+
+    /* =========================================
+       OVERLAY 3D MODEL VIEWER
+       ========================================= */
+    #model-viewer-overlay {
+      display: none;
+      position: fixed;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(0, 0, 0, 0.95);
+      z-index: 99999; /* Di atas segalanya */
+      flex-direction: column;
+    }
+    model-viewer {
+      width: 100%;
+      height: 100%;
+      --poster-color: transparent;
+    }
+    .btn-close-3d {
+      position: absolute;
+      top: 30px; right: 20px;
+      background: #fff;
+      color: #000;
+      border: none;
+      padding: 10px 20px;
+      border-radius: 20px;
+      font-weight: bold;
+      z-index: 100000;
+      cursor: pointer;
     }
 
-    /* Keyframes for Animations */
     @keyframes float {
       0%, 100% { transform: translateY(0); }
       50% { transform: translateY(-15px); }
     }
-    @keyframes pulseGlow {
-      0% { filter: drop-shadow(0 0 5px rgba(255,255,255,0.2)); }
-      100% { filter: drop-shadow(0 0 15px rgba(255,255,255,0.6)); }
-    }
-    @keyframes shine {
-      0% { left: -100%; }
-      20% { left: 100%; }
-      100% { left: 100%; }
-    }
-    @keyframes pulse {
-      0%, 100% { opacity: 0.4; }
-      50% { opacity: 1; }
-    }
-
-    /* Custom Scanning UI Overlay */
-    #scan-ui {
-      display: none; position: absolute;
-      top: 50%; left: 50%; transform: translate(-50%, -50%);
-      width: 80vw; height: 80vw; max-width: 400px; max-height: 400px;
-      border: 2px dashed rgba(255, 255, 255, 0.4);
-      border-radius: 20px;
-      pointer-events: none;
-      z-index: 100;
-      animation: scanPulse 2s infinite alternate;
-    }
     @keyframes scanPulse {
-      0% { border-color: rgba(255,255,255,0.2); transform: translate(-50%, -50%) scale(0.98); }
-      100% { border-color: rgba(255,255,255,0.6); transform: translate(-50%, -50%) scale(1.02); }
+      0% { opacity: 0.6; transform: scale(0.99); }
+      100% { opacity: 1; transform: scale(1); }
     }
   </style>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      const overlay = document.querySelector('#spatial-overlay');
+      // Elements
+      const overlayStart = document.querySelector('#spatial-overlay');
       const startBtn = document.querySelector('.btn-start');
-      const loadingText = document.querySelector('.loading-text');
       const scanUI = document.querySelector('#scan-ui');
+      const arLogo = document.querySelector('#ar-logo');
+      const btn3D = document.querySelector('#btn-3d');
       
-      // Ambil elemen Video dan Audio Narasi
       const video = document.querySelector("#panda-video");
       const narration = document.querySelector("#panda-narration");
+      
+      const modelOverlay = document.querySelector('#model-viewer-overlay');
+      const close3DBtn = document.querySelector('.btn-close-3d');
 
+      // 1. Klik Mulai Pengalaman
       startBtn.addEventListener('click', function() {
-        // Unlock autoplay policy untuk kedua media
         video.muted = false;
-        
         video.play().then(() => video.pause()).catch(e => console.log("Video pending"));
         narration.play().then(() => narration.pause()).catch(e => console.log("Audio pending"));
 
-        // Transisi UI
-        startBtn.style.display = 'none';
-        loadingText.style.opacity = '1';
-        loadingText.innerText = "INITIALIZING AR ENGINE...";
-
-        // Hapus overlay dan tampilkan Custom Scanner UI
+        overlayStart.style.opacity = '0';
+        
         setTimeout(() => {
-          overlay.style.opacity = '0';
-          setTimeout(() => {
-            overlay.style.display = 'none';
-            scanUI.style.display = 'block'; // Tampilkan frame scanner
-          }, 800);
-        }, 1500);
+          overlayStart.style.display = 'none';
+          
+          // Tampilkan UI AR (Frame putus-putus, Logo, Tombol 3D)
+          scanUI.style.display = 'block';
+          arLogo.style.display = 'block';
+          btn3D.style.display = 'block';
+        }, 800);
+      });
+
+      // 2. Buka 3D Model Viewer
+      btn3D.addEventListener('click', () => {
+        modelOverlay.style.display = 'flex';
+        // Pause video AR jika sedang jalan
+        video.pause();
+        narration.pause();
+      });
+
+      // 3. Tutup 3D Model Viewer
+      close3DBtn.addEventListener('click', () => {
+        modelOverlay.style.display = 'none';
       });
     });
 
-    // Komponen untuk sinkronisasi play/pause Video dan Narasi
+    // 4. Deteksi Marker MindAR
     AFRAME.registerComponent('vidhandler', {
       init: function () {
         const video = document.querySelector("#panda-video");
@@ -181,18 +209,15 @@
         const scanUI = document.querySelector('#scan-ui');
         
         this.el.addEventListener('targetFound', () => {
-          // Sembunyikan scanner frame saat ketemu
+          // Hilangkan garis putus-putus saat video muncul
           if(scanUI) scanUI.style.display = 'none'; 
-          
-          // Mainkan video (nature) dan narasi (vocal) secara bersamaan
           video.play();
           narration.play();
         });
 
         this.el.addEventListener('targetLost', () => {
-          // Munculkan scanner lagi saat marker hilang
+          // Munculkan lagi garis putus-putus saat marker hilang
           if(scanUI) scanUI.style.display = 'block'; 
-          
           video.pause();
           narration.pause();
         });
@@ -202,23 +227,33 @@
 </head>
 <body>
   
-  <!-- UI Spatial Vibes -->
   <div id="spatial-overlay">
     <div class="glass-panel">
-      <!-- Logo PlayXR -->
-      <img src="logo-playxr.svg" alt="PlayXR Logo" class="logo">
-      
+      <img src="logo-playxr.svg" alt="PlayXR Logo" style="width: 120px; margin-bottom: 20px;">
       <h1>Panda Merah AR</h1>
-      <p>Nyalakan volume Anda. Posisikan marker di dalam area bingkai untuk melihat keajaiban.</p>
-      <button class="btn-start">MULAI PENGALAMAN</button>
-      <div class="loading-text"></div>
+      <p>Nyalakan volume Anda. Arahkan kamera ke marker untuk memulai.</p>
+      <button class="btn-start">MULAI</button>
     </div>
   </div>
 
-  <!-- Custom Scan Frame (Muncul setelah klik mulai) -->
+  <img id="ar-logo" src="logo-playxr.svg" alt="PlayXR">
   <div id="scan-ui"></div>
+  <button id="btn-3d">LIHAT 3D</button>
 
-  <!-- Scene WebAR -->
+  <div id="model-viewer-overlay">
+    <button class="btn-close-3d">TUTUP 3D</button>
+    
+    <model-viewer 
+      src="Red%20Panda.glb" 
+      ios-src="Red%20Panda.usdz" 
+      alt="3D Red Panda" 
+      auto-rotate 
+      camera-controls 
+      autoplay 
+      ar>
+    </model-viewer>
+  </div>
+
   <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiLoading: no; uiScanning: no;" 
            color-space="sRGB" 
            renderer="colorManagement: true, physicallyCorrectLights" 
@@ -226,36 +261,18 @@
            device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <!-- 1. Video dengan audio nature asli -->
       <video id="panda-video" 
              src="Red_panda_with_info_pop_202608111634.mp4" 
-             preload="auto" 
-             crossorigin="anonymous" 
-             playsinline 
-             webkit-playsinline 
-             loop>
+             preload="auto" crossorigin="anonymous" 
+             playsinline webkit-playsinline loop>
       </video>
-      
-      <!-- 2. Audio narasi terpisah -->
-      <!-- Siapkan file mp3 khusus suara vokalnya saja (tanpa musik agar tidak tabrakan) -->
-      <audio id="panda-narration" 
-             src="narration.mp3" 
-             preload="auto" 
-             crossorigin="anonymous" 
-             loop>
-      </audio>
+      <audio id="panda-narration" src="narration.mp3" preload="auto" crossorigin="anonymous" loop></audio>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- AR Target -->
     <a-entity mindar-image-target="targetIndex: 0" vidhandler>
-      <a-video src="#panda-video" 
-               position="0 0 0" 
-               rotation="0 0 0" 
-               width="1" 
-               height="1.77">
-      </a-video>
+      <a-video src="#panda-video" position="0 0 0" rotation="0 0 0" width="1" height="1.77"></a-video>
     </a-entity>
     
   </a-scene>
