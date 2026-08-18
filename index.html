@@ -1,25 +1,28 @@
 <!DOCTYPE html>
 <html>
 <head>
-  <meta charset="utf-8" />
-  <title>Red Panda WebAR</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1" />
+  <title>MindAR - Red Panda WebAR</title>
   
-  <script src="https://aframe.io/releases/1.3.0/aframe.min.js"></script>
-  <script src="https://raw.githack.com/AR-js-org/AR.js/master/aframe/build/aframe-ar.js"></script>
+  <!-- Import A-Frame -->
+  <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
+  <!-- Import MindAR Image Tracking khusus A-Frame -->
+  <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
+  <!-- Script deteksi tracking -->
   <script>
     AFRAME.registerComponent('vidhandler', {
       init: function () {
-        this.vid = document.querySelector("#my-video");
+        const video = document.querySelector("#panda-video");
 
-        // Autoplay saat marker frame pertama video terdeteksi
-        this.el.addEventListener('markerFound', () => {
-          this.vid.play();
+        // Event saat target terdeteksi di kamera
+        this.el.addEventListener('targetFound', () => {
+          video.play();
         });
 
-        // Pause saat marker hilang
-        this.el.addEventListener('markerLost', () => {
-          this.vid.pause();
+        // Event saat target hilang dari kamera
+        this.el.addEventListener('targetLost', () => {
+          video.pause();
         });
       }
     });
@@ -28,31 +31,36 @@
 
 <body style="margin: 0; overflow: hidden;">
   
-  <a-scene embedded arjs="sourceType: webcam; debugUIEnabled: false; trackingMethod: best;">
+  <!-- Scene MindAR: 'imageTargetSrc' mengarah ke file .mind kamu -->
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind;" 
+           color-space="sRGB" 
+           renderer="colorManagement: true, physicallyCorrectLights" 
+           vr-mode-ui="enabled: false" 
+           device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <video id="my-video" 
+      <video id="panda-video" 
+             src="Red_panda_with_info_pop_202608111634.mp4" 
+             preload="auto" 
              crossorigin="anonymous" 
              playsinline 
              webkit-playsinline 
              loop 
-             muted 
-             src="Red_panda_with_info_pop_202608111634.mp4">
+             muted>
       </video>
     </a-assets>
 
-    <a-marker type="pattern" url="pattern-panda.patt" vidhandler>
-      
-      <a-video src="#my-video" 
-               position="0 0.1 0" 
-               rotation="-90 0 0" 
+    <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
+
+    <!-- targetIndex: 0 (Mengacu pada target pertama di file .mind) -->
+    <a-entity mindar-image-target="targetIndex: 0" vidhandler>
+      <a-video src="#panda-video" 
+               position="0 0 0" 
+               rotation="0 0 0" 
                width="1" 
                height="1.77">
       </a-video>
-
-    </a-marker>
-
-    <a-entity camera></a-entity>
+    </a-entity>
     
   </a-scene>
 
