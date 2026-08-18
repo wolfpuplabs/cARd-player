@@ -2,25 +2,112 @@
 <html>
 <head>
   <meta name="viewport" content="width=device-width, initial-scale=1" />
-  <title>MindAR - Red Panda WebAR</title>
+  <title>Spatial AR - Red Panda</title>
   
-  <!-- Import A-Frame -->
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
-  <!-- Import MindAR Image Tracking khusus A-Frame -->
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
 
-  <!-- Script deteksi tracking -->
+  <style>
+    /* Desain UI Spatial Vibes (Glassmorphism) */
+    body { 
+      margin: 0; 
+      overflow: hidden; 
+      font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, Helvetica, Arial, sans-serif; 
+    }
+    
+    #spatial-overlay {
+      position: absolute;
+      top: 0; left: 0; width: 100%; height: 100%;
+      background: rgba(10, 10, 10, 0.45);
+      /* Efek blur pada background seperti antarmuka Spatial / Vision Pro */
+      backdrop-filter: blur(15px); 
+      -webkit-backdrop-filter: blur(15px);
+      display: flex;
+      flex-direction: column;
+      justify-content: center;
+      align-items: center;
+      z-index: 9999;
+      color: white;
+      text-align: center;
+      transition: opacity 0.5s ease-out;
+    }
+
+    .glass-panel {
+      background: rgba(255, 255, 255, 0.1);
+      padding: 40px 30px;
+      border-radius: 24px;
+      border: 1px solid rgba(255, 255, 255, 0.2);
+      box-shadow: 0 8px 32px rgba(0, 0, 0, 0.3);
+      max-width: 80%;
+    }
+
+    h1 { margin-top: 0; font-size: 26px; font-weight: 400; letter-spacing: 0.5px; }
+    p { font-size: 15px; opacity: 0.8; margin-bottom: 30px; line-height: 1.5; }
+
+    .btn-start {
+      background: rgba(255, 255, 255, 0.9);
+      color: #000;
+      border: none;
+      padding: 14px 32px;
+      font-size: 16px;
+      border-radius: 30px;
+      cursor: pointer;
+      font-weight: 600;
+      transition: all 0.2s;
+      box-shadow: 0 4px 15px rgba(255, 255, 255, 0.2);
+    }
+    
+    .btn-start:active {
+      transform: scale(0.95);
+    }
+
+    .loading-text {
+      font-size: 14px;
+      margin-top: 15px;
+      opacity: 0;
+      transition: opacity 0.3s;
+    }
+  </style>
+
   <script>
+    document.addEventListener("DOMContentLoaded", function() {
+      const overlay = document.querySelector('#spatial-overlay');
+      const startBtn = document.querySelector('.btn-start');
+      const video = document.querySelector("#panda-video");
+      const loadingText = document.querySelector('.loading-text');
+
+      startBtn.addEventListener('click', function() {
+        // Minta izin audio dengan memainkan video secara diam-diam lalu mem-pause
+        video.muted = false; // Memastikan video tidak di-mute
+        video.play().then(() => {
+          video.pause();
+        }).catch((e) => {
+          console.log("Menunggu marker untuk memutar video.");
+        });
+
+        // Mengubah UI menjadi transisi halus
+        startBtn.style.display = 'none';
+        loadingText.style.opacity = '1';
+        loadingText.innerText = "Membuka Kamera Spatial...";
+
+        // Menghilangkan overlay setelah sistem AR (kamera) siap diload
+        setTimeout(() => {
+          overlay.style.opacity = '0';
+          setTimeout(() => overlay.style.display = 'none', 500);
+        }, 1500);
+      });
+    });
+
+    // Komponen untuk play/pause saat marker terdeteksi
     AFRAME.registerComponent('vidhandler', {
       init: function () {
         const video = document.querySelector("#panda-video");
-
-        // Event saat target terdeteksi di kamera
+        
         this.el.addEventListener('targetFound', () => {
+          // Video diputar beserta narasi audionya
           video.play();
         });
 
-        // Event saat target hilang dari kamera
         this.el.addEventListener('targetLost', () => {
           video.pause();
         });
@@ -28,11 +115,18 @@
     });
   </script>
 </head>
-
-<body style="margin: 0; overflow: hidden;">
+<body>
   
-  <!-- Scene MindAR: 'imageTargetSrc' mengarah ke file .mind kamu -->
-  <a-scene mindar-image="imageTargetSrc: ./targets.mind;" 
+  <div id="spatial-overlay">
+    <div class="glass-panel">
+      <h1>Panda Merah AR</h1>
+      <p>Nyalakan volume Anda. Arahkan kamera ke gambar marker untuk memutar video & narasi spatial.</p>
+      <button class="btn-start">Masuk ke AR</button>
+      <div class="loading-text"></div>
+    </div>
+  </div>
+
+  <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiLoading: no; uiScanning: no;" 
            color-space="sRGB" 
            renderer="colorManagement: true, physicallyCorrectLights" 
            vr-mode-ui="enabled: false" 
@@ -45,14 +139,12 @@
              crossorigin="anonymous" 
              playsinline 
              webkit-playsinline 
-             loop 
-             muted>
+             loop>
       </video>
     </a-assets>
 
     <a-camera position="0 0 0" look-controls="enabled: false"></a-camera>
 
-    <!-- targetIndex: 0 (Mengacu pada target pertama di file .mind) -->
     <a-entity mindar-image-target="targetIndex: 0" vidhandler>
       <a-video src="#panda-video" 
                position="0 0 0" 
