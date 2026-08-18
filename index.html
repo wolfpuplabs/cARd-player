@@ -6,45 +6,26 @@
   
   <script src="https://aframe.io/releases/1.5.0/aframe.min.js"></script>
   <script src="https://cdn.jsdelivr.net/npm/mind-ar@1.2.5/dist/mindar-image-aframe.prod.js"></script>
-  
   <script type="module" src="https://ajax.googleapis.com/ajax/libs/model-viewer/3.1.1/model-viewer.min.js"></script>
 
   <style>
-    /* =========================================
-       MODERN ANIMATED UI STYLES
-       ========================================= */
     body { 
-      margin: 0; 
-      overflow: hidden; 
+      margin: 0; overflow: hidden; background-color: #000;
       font-family: -apple-system, BlinkMacSystemFont, "Segoe UI", Roboto, sans-serif; 
-      background-color: #000;
     }
     
-    /* Overlay Start Screen */
     #spatial-overlay {
-      position: absolute;
-      top: 0; left: 0; width: 100%; height: 100%;
+      position: absolute; top: 0; left: 0; width: 100%; height: 100%;
       background: radial-gradient(circle at center, rgba(15, 20, 30, 0.6) 0%, rgba(0, 0, 0, 0.9) 100%);
-      backdrop-filter: blur(20px); 
-      -webkit-backdrop-filter: blur(20px);
-      display: flex;
-      flex-direction: column;
-      justify-content: center;
-      align-items: center;
-      z-index: 9999;
-      color: white;
-      text-align: center;
-      transition: opacity 0.8s ease;
+      backdrop-filter: blur(20px); -webkit-backdrop-filter: blur(20px);
+      display: flex; flex-direction: column; justify-content: center; align-items: center;
+      z-index: 9999; color: white; text-align: center; transition: opacity 0.8s ease;
     }
 
     .glass-panel {
       background: linear-gradient(135deg, rgba(255,255,255,0.1) 0%, rgba(255,255,255,0.03) 100%);
-      padding: 50px 40px;
-      border-radius: 32px;
-      border: 1px solid rgba(255, 255, 255, 0.15);
-      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5);
-      max-width: 85%;
-      width: 320px;
+      padding: 50px 40px; border-radius: 32px; border: 1px solid rgba(255, 255, 255, 0.15);
+      box-shadow: 0 20px 50px rgba(0, 0, 0, 0.5); max-width: 85%; width: 320px;
       animation: float 6s ease-in-out infinite;
     }
 
@@ -52,111 +33,40 @@
     p { font-size: 15px; opacity: 0.7; margin-bottom: 35px; line-height: 1.6; }
 
     .btn-start {
-      background: rgba(255, 255, 255, 0.1);
-      color: #fff;
-      border: 1px solid rgba(255, 255, 255, 0.3);
-      padding: 16px 40px;
-      font-size: 16px;
-      border-radius: 40px;
-      cursor: pointer;
-      font-weight: 600;
-      transition: all 0.3s ease;
+      background: rgba(255, 255, 255, 0.1); color: #fff; border: 1px solid rgba(255, 255, 255, 0.3);
+      padding: 16px 40px; font-size: 16px; border-radius: 40px; cursor: pointer;
+      font-weight: 600; transition: all 0.3s ease;
     }
-    .btn-start:hover { background: rgba(255, 255, 255, 0.2); }
-
-    /* =========================================
-       AR INTERFACE UI (Sketsa Kuning)
-       ========================================= */
     
-    /* Frame Putus-putus di Tepi Layar */
     #scan-ui {
-      display: none; 
-      position: absolute;
-      top: 15px; left: 15px; right: 15px; bottom: 15px;
-      border: 4px dashed #FFD700; /* Warna kuning */
-      border-radius: 20px;
-      pointer-events: none;
-      z-index: 100;
-      animation: scanPulse 1.5s infinite alternate;
+      display: none; position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
+      border: 4px dashed #FFD700; border-radius: 20px; pointer-events: none;
+      z-index: 100; animation: scanPulse 1.5s infinite alternate;
     }
 
-    /* Logo PlayXR di atas AR */
     #ar-logo {
-      display: none;
-      position: absolute;
-      top: 35px;
-      left: 50%;
-      transform: translateX(-50%);
-      width: 150px; /* Sesuaikan ukuran logo */
-      z-index: 101;
-      filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
+      display: none; position: absolute; top: 35px; left: 50%; transform: translateX(-50%);
+      width: 150px; z-index: 101; filter: drop-shadow(0px 2px 4px rgba(0,0,0,0.5));
     }
 
-    /* Tombol Buka 3D Model Viewer */
     #btn-3d {
-      display: none;
-      position: absolute;
-      bottom: 40px;
-      left: 50%;
-      transform: translateX(-50%);
-      background: #FFD700; /* Warna kuning */
-      color: #000;
-      border: none;
-      padding: 14px 35px;
-      border-radius: 30px;
-      font-weight: 700;
-      font-size: 16px;
-      box-shadow: 0 4px 20px rgba(255, 215, 0, 0.4);
-      z-index: 101;
-      cursor: pointer;
-      pointer-events: auto;
-      text-transform: uppercase;
-      letter-spacing: 1px;
-    }
-    #btn-3d:active { transform: translateX(-50%) scale(0.95); }
-
-    /* =========================================
-       OVERLAY 3D MODEL VIEWER
-       ========================================= */
-    #model-viewer-overlay {
-      display: none;
-      position: fixed;
-      top: 0; left: 0; width: 100%; height: 100%;
-      background: rgba(0, 0, 0, 0.95);
-      z-index: 99999; /* Di atas segalanya */
-      flex-direction: column;
-    }
-    model-viewer {
-      width: 100%;
-      height: 100%;
-      --poster-color: transparent;
-    }
-    .btn-close-3d {
-      position: absolute;
-      top: 30px; right: 20px;
-      background: #fff;
-      color: #000;
-      border: none;
-      padding: 10px 20px;
-      border-radius: 20px;
-      font-weight: bold;
-      z-index: 100000;
-      cursor: pointer;
+      display: none; position: absolute; bottom: 40px; left: 50%; transform: translateX(-50%);
+      background: #FFD700; color: #000; border: none; padding: 14px 35px;
+      border-radius: 30px; font-weight: 700; font-size: 16px; z-index: 101; cursor: pointer;
+      pointer-events: auto; text-transform: uppercase; letter-spacing: 1px;
     }
 
-    @keyframes float {
-      0%, 100% { transform: translateY(0); }
-      50% { transform: translateY(-15px); }
+    /* Memasukkan model-viewer secara transparan agar bisa dipanggil sistem tanpa harus terlihat */
+    #hidden-model-wrapper {
+      position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;
     }
-    @keyframes scanPulse {
-      0% { opacity: 0.6; transform: scale(0.99); }
-      100% { opacity: 1; transform: scale(1); }
-    }
+
+    @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
+    @keyframes scanPulse { 0% { opacity: 0.6; transform: scale(0.99); } 100% { opacity: 1; transform: scale(1); } }
   </style>
 
   <script>
     document.addEventListener("DOMContentLoaded", function() {
-      // Elements
       const overlayStart = document.querySelector('#spatial-overlay');
       const startBtn = document.querySelector('.btn-start');
       const scanUI = document.querySelector('#scan-ui');
@@ -166,42 +76,38 @@
       const video = document.querySelector("#panda-video");
       const narration = document.querySelector("#panda-narration");
       
-      const modelOverlay = document.querySelector('#model-viewer-overlay');
-      const close3DBtn = document.querySelector('.btn-close-3d');
+      // Ambil elemen model-viewer yang tersembunyi
+      const modelViewer = document.querySelector('model-viewer');
 
-      // 1. Klik Mulai Pengalaman
       startBtn.addEventListener('click', function() {
         video.muted = false;
         video.play().then(() => video.pause()).catch(e => console.log("Video pending"));
         narration.play().then(() => narration.pause()).catch(e => console.log("Audio pending"));
 
         overlayStart.style.opacity = '0';
-        
         setTimeout(() => {
           overlayStart.style.display = 'none';
-          
-          // Tampilkan UI AR (Frame putus-putus, Logo, Tombol 3D)
           scanUI.style.display = 'block';
           arLogo.style.display = 'block';
           btn3D.style.display = 'block';
         }, 800);
       });
 
-      // 2. Buka 3D Model Viewer
+      // Saat tombol LIHAT 3D diklik, langsung lewati interface dan panggil fungsi AR Scan Lantai OS
       btn3D.addEventListener('click', () => {
-        modelOverlay.style.display = 'flex';
-        // Pause video AR jika sedang jalan
         video.pause();
         narration.pause();
-      });
-
-      // 3. Tutup 3D Model Viewer
-      close3DBtn.addEventListener('click', () => {
-        modelOverlay.style.display = 'none';
+        
+        // Memaksa model-viewer untuk langsung membuka mode AR bawaan HP (Scene Viewer / AR Quick Look)
+        if (modelViewer.canActivateAR) {
+          modelViewer.activateAR();
+        } else {
+          // Fallback jika diklik di Browser PC atau HP yang tidak support AR lantai
+          alert("Perangkat atau browser Anda belum mendukung fitur Scan Lantai AR.");
+        }
       });
     });
 
-    // 4. Deteksi Marker MindAR
     AFRAME.registerComponent('vidhandler', {
       init: function () {
         const video = document.querySelector("#panda-video");
@@ -209,17 +115,13 @@
         const scanUI = document.querySelector('#scan-ui');
         
         this.el.addEventListener('targetFound', () => {
-          // Hilangkan garis putus-putus saat video muncul
           if(scanUI) scanUI.style.display = 'none'; 
-          video.play();
-          narration.play();
+          video.play(); narration.play();
         });
 
         this.el.addEventListener('targetLost', () => {
-          // Munculkan lagi garis putus-putus saat marker hilang
           if(scanUI) scanUI.style.display = 'block'; 
-          video.pause();
-          narration.pause();
+          video.pause(); narration.pause();
         });
       }
     });
@@ -240,32 +142,23 @@
   <div id="scan-ui"></div>
   <button id="btn-3d">LIHAT 3D</button>
 
-  <div id="model-viewer-overlay">
-    <button class="btn-close-3d">TUTUP 3D</button>
-    
+  <div id="hidden-model-wrapper">
     <model-viewer 
       src="Red%20Panda.glb" 
       ios-src="Red%20Panda.usdz" 
+      ar 
+      ar-modes="webxr scene-viewer quick-look" 
       alt="3D Red Panda" 
-      auto-rotate 
-      camera-controls 
-      autoplay 
-      ar>
+      autoplay>
     </model-viewer>
   </div>
 
   <a-scene mindar-image="imageTargetSrc: ./targets.mind; uiLoading: no; uiScanning: no;" 
-           color-space="sRGB" 
-           renderer="colorManagement: true, physicallyCorrectLights" 
-           vr-mode-ui="enabled: false" 
-           device-orientation-permission-ui="enabled: false">
+           color-space="sRGB" renderer="colorManagement: true, physicallyCorrectLights" 
+           vr-mode-ui="enabled: false" device-orientation-permission-ui="enabled: false">
     
     <a-assets>
-      <video id="panda-video" 
-             src="Red_panda_with_info_pop_202608111634.mp4" 
-             preload="auto" crossorigin="anonymous" 
-             playsinline webkit-playsinline loop>
-      </video>
+      <video id="panda-video" src="Red_panda_with_info_pop_202608111634.mp4" preload="auto" crossorigin="anonymous" playsinline webkit-playsinline loop></video>
       <audio id="panda-narration" src="narration.mp3" preload="auto" crossorigin="anonymous" loop></audio>
     </a-assets>
 
