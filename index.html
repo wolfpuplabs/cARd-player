@@ -76,6 +76,17 @@
       const video = document.querySelector("#panda-video");
       const narration = document.querySelector("#panda-narration");
       const modelViewer = document.querySelector('model-viewer');
+      
+      // Variabel penanda apakah pengguna sedang berada di dalam AR mode 3D
+      let isViewing3D = false;
+
+      // Event Listener untuk mendeteksi tab kembali terbuka (kembali dari AR 3D)
+      document.addEventListener("visibilitychange", () => {
+        if (document.visibilityState === "visible" && isViewing3D) {
+          // Jika tab kembali aktif dan pengguna sebelumnya masuk ke mode 3D, reload halaman
+          window.location.reload();
+        }
+      });
 
       startBtn.addEventListener('click', function() {
         video.muted = false;
@@ -91,30 +102,26 @@
         }, 800);
       });
 
-      // ==========================================
-      // LOGIKA TOMBOL 3D (MEMPERBAIKI BUG KAMERA iOS)
-      // ==========================================
       btn3D.addEventListener('click', () => {
-        // Mencegah user klik berulang kali saat proses transisi
         btn3D.innerText = "MEMUAT...";
         btn3D.style.pointerEvents = "none";
 
         video.pause();
         narration.pause();
         
-        // 1. Matikan akses kamera MindAR secara paksa (Sangat Penting untuk iOS)
         const sceneEl = document.querySelector('a-scene');
         const arSystem = sceneEl.systems["mindar-image-system"];
         if (arSystem) {
-          arSystem.stop(); // Mematikan webcam
+          arSystem.stop(); 
         }
 
-        // 2. Beri waktu (500 milidetik) agar iOS benar-benar merilis hardware kamera
         setTimeout(() => {
+          // Aktifkan penanda bahwa user pergi ke mode 3D native
+          isViewing3D = true;
+          
           const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
 
           if (isIOS) {
-            // Jalankan AR Quick Look Apple
             const arLink = document.createElement('a');
             arLink.setAttribute('rel', 'ar');
             arLink.setAttribute('href', 'Red%20Panda.usdz');
@@ -124,23 +131,16 @@
             arLink.click();
             document.body.removeChild(arLink);
           } else {
-            // Jalankan Scene Viewer Android
             if (modelViewer.canActivateAR) {
               modelViewer.activateAR();
             } else {
               alert("Perangkat Anda belum mendukung fitur Scan Lantai AR.");
+              isViewing3D = false; // Batalkan jika gagal
+              btn3D.innerText = "LIHAT 3D";
+              btn3D.style.pointerEvents = "auto";
             }
           }
-
-          // Kembalikan status tombol 3D
-          setTimeout(() => {
-            btn3D.innerText = "LIHAT 3D";
-            btn3D.style.pointerEvents = "auto";
-            // Perhatian: Setelah kembali dari model 3D, layar web akan freeze karena kameranya kita matikan. 
-            // Pengguna harus merefresh (reload) halaman jika ingin scan gambar lagi.
-          }, 2000);
-
-        }, 500); // 500ms adalah waktu tunggu yang cukup aman untuk melepas kuncian kamera
+        }, 500); 
       });
     });
 
