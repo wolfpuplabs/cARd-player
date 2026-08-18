@@ -42,6 +42,7 @@
       display: none; position: absolute; top: 15px; left: 15px; right: 15px; bottom: 15px;
       border: 4px dashed #FFD700; border-radius: 20px; pointer-events: none;
       z-index: 100; animation: scanPulse 1.5s infinite alternate;
+      box-sizing: border-box;
     }
 
     #ar-logo {
@@ -56,9 +57,9 @@
       pointer-events: auto; text-transform: uppercase; letter-spacing: 1px;
     }
 
-    /* Memasukkan model-viewer secara transparan agar bisa dipanggil sistem tanpa harus terlihat */
+    /* Model viewer untuk Android diletakkan di luar layar agar tidak mengganggu */
     #hidden-model-wrapper {
-      position: absolute; width: 1px; height: 1px; overflow: hidden; opacity: 0; pointer-events: none;
+      position: absolute; width: 1px; height: 1px; overflow: hidden; z-index: -1;
     }
 
     @keyframes float { 0%, 100% { transform: translateY(0); } 50% { transform: translateY(-15px); } }
@@ -75,8 +76,6 @@
       
       const video = document.querySelector("#panda-video");
       const narration = document.querySelector("#panda-narration");
-      
-      // Ambil elemen model-viewer yang tersembunyi
       const modelViewer = document.querySelector('model-viewer');
 
       startBtn.addEventListener('click', function() {
@@ -93,17 +92,35 @@
         }, 800);
       });
 
-      // Saat tombol LIHAT 3D diklik, langsung lewati interface dan panggil fungsi AR Scan Lantai OS
+      // Logika khusus untuk tombol 3D
       btn3D.addEventListener('click', () => {
         video.pause();
         narration.pause();
         
-        // Memaksa model-viewer untuk langsung membuka mode AR bawaan HP (Scene Viewer / AR Quick Look)
-        if (modelViewer.canActivateAR) {
-          modelViewer.activateAR();
+        // Deteksi apakah perangkat menggunakan iOS (iPhone/iPad)
+        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+        if (isIOS) {
+          // WORKAROUND iOS: Pakai tag link <a> standar Apple dengan rel="ar".
+          // Cara ini mencegah bentrok kamera dengan browser dan memaksa sistem langsung masuk ke AR.
+          const arLink = document.createElement('a');
+          arLink.setAttribute('rel', 'ar');
+          arLink.setAttribute('href', 'Red%20Panda.usdz');
+          
+          // Syarat mutlak Apple: harus ada tag <img> di dalam tag <a> agar tombol AR Quick Look bekerja
+          const img = document.createElement('img');
+          arLink.appendChild(img);
+          
+          document.body.appendChild(arLink);
+          arLink.click();
+          document.body.removeChild(arLink);
         } else {
-          // Fallback jika diklik di Browser PC atau HP yang tidak support AR lantai
-          alert("Perangkat atau browser Anda belum mendukung fitur Scan Lantai AR.");
+          // Untuk Android (Scene Viewer), gunakan model-viewer seperti biasa
+          if (modelViewer.canActivateAR) {
+            modelViewer.activateAR();
+          } else {
+            alert("Perangkat Anda belum mendukung fitur Scan Lantai AR.");
+          }
         }
       });
     });
@@ -115,12 +132,20 @@
         const scanUI = document.querySelector('#scan-ui');
         
         this.el.addEventListener('targetFound', () => {
-          if(scanUI) scanUI.style.display = 'none'; 
+          // GARIS PUTUS-PUTUS TIDAK DIHILANGKAN
+          // Kita hanya mematikan animasinya agar menjadi frame diam yang fokus
+          if(scanUI) {
+            scanUI.style.animation = 'none'; 
+            scanUI.style.opacity = '1';
+          }
           video.play(); narration.play();
         });
 
         this.el.addEventListener('targetLost', () => {
-          if(scanUI) scanUI.style.display = 'block'; 
+          // Nyalakan kembali animasi kedap-kedip saat gambar hilang (mencari)
+          if(scanUI) {
+            scanUI.style.animation = 'scanPulse 1.5s infinite alternate';
+          }
           video.pause(); narration.pause();
         });
       }
@@ -145,9 +170,8 @@
   <div id="hidden-model-wrapper">
     <model-viewer 
       src="Red%20Panda.glb" 
-      ios-src="Red%20Panda.usdz" 
       ar 
-      ar-modes="webxr scene-viewer quick-look" 
+      ar-modes="webxr scene-viewer" 
       alt="3D Red Panda" 
       autoplay>
     </model-viewer>
