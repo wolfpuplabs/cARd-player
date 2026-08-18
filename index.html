@@ -57,7 +57,6 @@
       pointer-events: auto; text-transform: uppercase; letter-spacing: 1px;
     }
 
-    /* Model viewer untuk Android diletakkan di luar layar agar tidak mengganggu */
     #hidden-model-wrapper {
       position: absolute; width: 1px; height: 1px; overflow: hidden; z-index: -1;
     }
@@ -92,36 +91,56 @@
         }, 800);
       });
 
-      // Logika khusus untuk tombol 3D
+      // ==========================================
+      // LOGIKA TOMBOL 3D (MEMPERBAIKI BUG KAMERA iOS)
+      // ==========================================
       btn3D.addEventListener('click', () => {
+        // Mencegah user klik berulang kali saat proses transisi
+        btn3D.innerText = "MEMUAT...";
+        btn3D.style.pointerEvents = "none";
+
         video.pause();
         narration.pause();
         
-        // Deteksi apakah perangkat menggunakan iOS (iPhone/iPad)
-        const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
-
-        if (isIOS) {
-          // WORKAROUND iOS: Pakai tag link <a> standar Apple dengan rel="ar".
-          // Cara ini mencegah bentrok kamera dengan browser dan memaksa sistem langsung masuk ke AR.
-          const arLink = document.createElement('a');
-          arLink.setAttribute('rel', 'ar');
-          arLink.setAttribute('href', 'Red%20Panda.usdz');
-          
-          // Syarat mutlak Apple: harus ada tag <img> di dalam tag <a> agar tombol AR Quick Look bekerja
-          const img = document.createElement('img');
-          arLink.appendChild(img);
-          
-          document.body.appendChild(arLink);
-          arLink.click();
-          document.body.removeChild(arLink);
-        } else {
-          // Untuk Android (Scene Viewer), gunakan model-viewer seperti biasa
-          if (modelViewer.canActivateAR) {
-            modelViewer.activateAR();
-          } else {
-            alert("Perangkat Anda belum mendukung fitur Scan Lantai AR.");
-          }
+        // 1. Matikan akses kamera MindAR secara paksa (Sangat Penting untuk iOS)
+        const sceneEl = document.querySelector('a-scene');
+        const arSystem = sceneEl.systems["mindar-image-system"];
+        if (arSystem) {
+          arSystem.stop(); // Mematikan webcam
         }
+
+        // 2. Beri waktu (500 milidetik) agar iOS benar-benar merilis hardware kamera
+        setTimeout(() => {
+          const isIOS = /iPad|iPhone|iPod/.test(navigator.userAgent) && !window.MSStream;
+
+          if (isIOS) {
+            // Jalankan AR Quick Look Apple
+            const arLink = document.createElement('a');
+            arLink.setAttribute('rel', 'ar');
+            arLink.setAttribute('href', 'Red%20Panda.usdz');
+            const img = document.createElement('img');
+            arLink.appendChild(img);
+            document.body.appendChild(arLink);
+            arLink.click();
+            document.body.removeChild(arLink);
+          } else {
+            // Jalankan Scene Viewer Android
+            if (modelViewer.canActivateAR) {
+              modelViewer.activateAR();
+            } else {
+              alert("Perangkat Anda belum mendukung fitur Scan Lantai AR.");
+            }
+          }
+
+          // Kembalikan status tombol 3D
+          setTimeout(() => {
+            btn3D.innerText = "LIHAT 3D";
+            btn3D.style.pointerEvents = "auto";
+            // Perhatian: Setelah kembali dari model 3D, layar web akan freeze karena kameranya kita matikan. 
+            // Pengguna harus merefresh (reload) halaman jika ingin scan gambar lagi.
+          }, 2000);
+
+        }, 500); // 500ms adalah waktu tunggu yang cukup aman untuk melepas kuncian kamera
       });
     });
 
@@ -132,8 +151,6 @@
         const scanUI = document.querySelector('#scan-ui');
         
         this.el.addEventListener('targetFound', () => {
-          // GARIS PUTUS-PUTUS TIDAK DIHILANGKAN
-          // Kita hanya mematikan animasinya agar menjadi frame diam yang fokus
           if(scanUI) {
             scanUI.style.animation = 'none'; 
             scanUI.style.opacity = '1';
@@ -142,7 +159,6 @@
         });
 
         this.el.addEventListener('targetLost', () => {
-          // Nyalakan kembali animasi kedap-kedip saat gambar hilang (mencari)
           if(scanUI) {
             scanUI.style.animation = 'scanPulse 1.5s infinite alternate';
           }
@@ -171,7 +187,7 @@
     <model-viewer 
       src="Red%20Panda.glb" 
       ar 
-      ar-modes="webxr scene-viewer" 
+      ar-modes="webxr scene-viewer quick-look" 
       alt="3D Red Panda" 
       autoplay>
     </model-viewer>
